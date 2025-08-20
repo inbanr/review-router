@@ -1,10 +1,25 @@
-from langchain_openai import ChatOpenAI  # ✅ instead of langchain_community
-from dotenv import load_dotenv
-import os
+import pandas as pd
+import bz2
 
-load_dotenv()
+def load_amazon_data(file_path, nrows=None):
+    with bz2.open(file_path, "rt") as f:
+        lines = f.readlines() if nrows is None else [next(f) for _ in range(nrows)]
 
-llm = ChatOpenAI(model="gpt-3.5-turbo")
+    labels = []
+    texts = []
+    for line in lines:
+        parts = line.strip().split(" ", 1)
+        if len(parts) == 2:
+            label, text = parts
+            labels.append(int(label[-1]))  # get 1 or 2
+            texts.append(text)
 
-response = llm.invoke("Summarize this review: I hated the delivery experience. It came two weeks late and broken.")
-print(response)
+    return pd.DataFrame({"label": labels, "text": texts})
+
+# Change path to where your files are
+base_path = "/Users/inban/.cache/kagglehub/datasets/bittlingmayer/amazonreviews/versions/7"
+
+train_df = load_amazon_data(f"{base_path}/train.ft.txt.bz2", nrows=10000)  # sample 10k rows
+test_df = load_amazon_data(f"{base_path}/test.ft.txt.bz2", nrows=1000)
+
+print(train_df.head())
